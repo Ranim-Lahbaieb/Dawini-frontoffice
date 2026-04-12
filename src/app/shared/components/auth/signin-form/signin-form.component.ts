@@ -1,40 +1,61 @@
-
 import { Component } from '@angular/core';
-import { LabelComponent } from '../../form/label/label.component';
-import { CheckboxComponent } from '../../form/input/checkbox.component';
-import { ButtonComponent } from '../../ui/button/button.component';
-import { InputFieldComponent } from '../../form/input/input-field.component';
-import { RouterModule } from '@angular/router';
+import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Router, RouterLink } from '@angular/router';
+import { AuthService } from '../../../services/auth.service';
 
 @Component({
   selector: 'app-signin-form',
-  imports: [
-    LabelComponent,
-    CheckboxComponent,
-    ButtonComponent,
-    InputFieldComponent,
-    RouterModule,
-    FormsModule
-],
-  templateUrl: './signin-form.component.html',
-  styles: ``
+  standalone: true,
+  imports: [CommonModule, FormsModule, RouterLink],
+  templateUrl: './signin-form.component.html'
 })
 export class SigninFormComponent {
-
+  email = '';
+  password = '';
   showPassword = false;
   isChecked = false;
 
-  email = '';
-  password = '';
+  errorMessage = '';
+  loading = false;
+  
 
-  togglePasswordVisibility() {
+  constructor(
+    private authService: AuthService,
+    private router: Router
+  ) {}
+
+  togglePasswordVisibility(): void {
     this.showPassword = !this.showPassword;
   }
+signInWithGoogle() {
+  window.location.href = 'http://localhost:8020/api/oauth2/authorization/google';
+}
 
-  onSignIn() {
-    console.log('Email:', this.email);
-    console.log('Password:', this.password);
-    console.log('Remember Me:', this.isChecked);
+  onSignIn(): void {
+    this.errorMessage = '';
+
+    if (!this.email || !this.password) {
+      this.errorMessage = 'Email and password are required.';
+      return;
+    }
+
+    this.loading = true;
+
+    this.authService.login({
+      email: this.email,
+      password: this.password
+    }).subscribe({
+      next: () => {
+        this.loading = false;
+        this.router.navigate(['/users']);
+      },
+      error: (err) => {
+        this.loading = false;
+        this.errorMessage =
+          err?.error?.message ||
+          'Invalid email or password.';
+      }
+    });
   }
 }

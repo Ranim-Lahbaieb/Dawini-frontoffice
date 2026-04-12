@@ -1,0 +1,49 @@
+<div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+  <!-- Total Users Card -->
+  <div class="rounded-xl border border-blue-200 bg-gradient-to-br from-blue-50 to-blue-100 p-6 shadow-md transition hover:shadow-lg">
+    <div class="flex items-center justify-between">
+      <div>
+        <p class="text-sm font-medium text-blue-600">Total Users</p>
+        <h3 class="mt-2 text-3xl font-bold text-blue-900">{{ totalUsers }}</h3>
+      </div>
+      <div class="rounded-full bg-blue-500 p-3 text-white text-2xl">👥</div>
+    </div>
+    <p class="mt-3 text-xs text-blue-600">📊 All registered users</p>
+  </div>
+
+  <!-- Active Users Card -->
+  <div class="rounded-xl border border-green-200 bg-gradient-to-br from-green-50 to-green-100 p-6 shadow-md transition hover:shadow-lg">
+    <div class="flex items-center justify-between">
+      <div>
+        <p class="text-sm font-medium text-green-600">Active Users</p>
+        <h3 class="mt-2 text-3xl font-bold text-green-900">{{ activeUsers }}</h3>
+      </div>
+      <div class="rounded-full bg-green-500 p-3 text-white text-2xl">✓</div>
+    </div>
+    <p class="mt-3 text-xs text-green-600">🟢 Enabled accounts</p>
+  </div>
+
+  <!-- Inactive Users Card -->
+  <div class="rounded-xl border border-red-200 bg-gradient-to-br from-red-50 to-red-100 p-6 shadow-md transition hover:shadow-lg">
+    <div class="flex items-center justify-between">
+      <div>
+        <p class="text-sm font-medium text-red-600">Inactive Users</p>
+        <h3 class="mt-2 text-3xl font-bold text-red-900">{{ inactiveUsers }}</h3>
+      </div>
+      <div class="rounded-full bg-red-500 p-3 text-white text-2xl">✕</div>
+    </div>
+    <p class="mt-3 text-xs text-red-600">🔴 Disabled accounts</p>
+  </div>
+
+  <!-- Admin Count Card -->
+  <div class="rounded-xl border border-purple-200 bg-gradient-to-br from-purple-50 to-purple-100 p-6 shadow-md transition hover:shadow-lg">
+    <div class="flex items-center justify-between">
+      <div>
+        <p class="text-sm font-medium text-purple-600">Administrators</p>
+        <h3 class="mt-2 text-3xl font-bold text-purple-900">{{ adminCount }}</h3>
+      </div>
+      <div class="rounded-full bg-purple-500 p-3 text-white text-2xl">👑</div>
+    </div>
+    <p class="mt-3 text-xs text-purple-600">👔 Admin accounts</p>
+  </div>
+</div>

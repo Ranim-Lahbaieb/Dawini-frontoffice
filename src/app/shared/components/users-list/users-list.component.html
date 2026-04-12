@@ -1,216 +1,388 @@
-<div class="overflow-hidden rounded-2xl border border-gray-200 bg-white pt-4">
+<div class="rounded-2xl border border-blue-100 bg-gradient-to-br from-white to-blue-50 p-6 shadow-lg">
+  <!-- Header -->
+  <div class="mb-6 border-b border-blue-200 pb-4">
+    <h2 class="flex items-center gap-2 text-2xl font-bold text-blue-900">
+      👥 Users Management
+    </h2>
+    <p class="mt-1 text-sm text-blue-600">Total: {{ filteredUsers.length }} users</p>
+  </div>
 
-  <!-- header -->
-  <div class="flex flex-col gap-4 px-6 mb-4 sm:flex-row sm:items-center sm:justify-between">
+  <!-- Messages -->
+  <div *ngIf="successMessage" class="mb-4 rounded-lg bg-green-50 px-4 py-3 text-sm text-green-700 border border-green-200">
+    ✓ {{ successMessage }}
+  </div>
 
-    <h3 class="text-lg font-semibold text-gray-800">
-      Users List
-    </h3>
+  <div *ngIf="errorMessage" class="mb-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700 border border-red-200">
+    ✕ {{ errorMessage }}
+  </div>
 
-    <!-- search -->
-    <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
+  <!-- Filters Section -->
+  <div class="mb-6 rounded-xl bg-white p-4 border border-blue-100">
+    <div class="mb-3 flex items-center justify-between">
+      <h3 class="text-sm font-semibold text-blue-900">🔍 Filters</h3>
+      <button
+        (click)="clearFilters()"
+        class="text-xs text-blue-600 hover:text-blue-800 transition"
+      >
+        Clear all
+      </button>
+    </div>
 
-      <div class="relative">
-
+    <div class="grid grid-cols-1 gap-4 md:grid-cols-4">
+      <!-- Search -->
+      <div>
+        <label class="mb-2 block text-xs font-medium text-gray-700">Search</label>
         <input
           type="text"
           [(ngModel)]="searchTerm"
           (input)="onSearchChange()"
-          placeholder="Search user..."
-          class="h-[42px] w-full rounded-lg border border-gray-300 bg-transparent py-2 pl-4 pr-4 text-sm text-gray-800 focus:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-500/10 xl:w-[300px]"
+          placeholder="Name, email, username..."
+          class="h-9 w-full rounded-lg border border-blue-200 bg-white px-3 text-sm text-gray-700 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
         />
-
       </div>
 
-      <button
-        class="px-4 py-2 text-sm border rounded-lg hover:bg-gray-50">
-        Add User
-      </button>
-
-    </div>
-
-  </div>
-
-
-  <!-- table -->
-  <div class="overflow-x-auto">
-
-    <table class="min-w-full">
-
-      <thead class="bg-gray-50 border-y">
-
-        <tr>
-
-          <th class="px-4 py-3 text-left text-xs font-medium text-gray-500">
-            ID
-          </th>
-
-          <th class="px-4 py-3 text-left text-xs font-medium text-gray-500">
-            Name
-          </th>
-
-          <th class="px-4 py-3 text-left text-xs font-medium text-gray-500">
-            Email
-          </th>
-
-          <th class="px-4 py-3 text-left text-xs font-medium text-gray-500">
-            Role
-          </th>
-
-          <th class="px-4 py-3 text-left text-xs font-medium text-gray-500">
-            Status
-          </th>
-
-          <th class="px-4 py-3 text-left text-xs font-medium text-gray-500">
-            Action
-          </th>
-
-        </tr>
-
-      </thead>
-
-
-
-      <tbody>
-
-        <tr
-          *ngFor="let row of currentItems"
-          class="border-b hover:bg-gray-50"
+      <!-- Role Filter -->
+      <div>
+        <label class="mb-2 block text-xs font-medium text-gray-700">Role</label>
+        <select
+          [(ngModel)]="selectedRole"
+          (change)="applyFilters()"
+          class="h-9 w-full rounded-lg border border-blue-200 bg-white px-3 text-sm text-gray-700 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
         >
+          <option value="">All Roles</option>
+          <option *ngFor="let role of roles" [value]="role">
+            {{ role.replace('ROLE_', '') }}
+          </option>
+        </select>
+      </div>
 
-          <td class="px-4 py-3">
-            {{ row.id }}
-          </td>
+      <!-- Status Filter -->
+      <div>
+        <label class="mb-2 block text-xs font-medium text-gray-700">Status</label>
+        <select
+          [(ngModel)]="selectedStatus"
+          (change)="applyFilters()"
+          class="h-9 w-full rounded-lg border border-blue-200 bg-white px-3 text-sm text-gray-700 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+        >
+          <option value="">All Status</option>
+          <option value="enabled">Active</option>
+          <option value="disabled">Inactive</option>
+        </select>
+      </div>
 
-          <td class="px-4 py-3">
-            {{ row.user.name }}
-          </td>
-
-          <td class="px-4 py-3">
-            {{ row.user.email }}
-          </td>
-
-          <td class="px-4 py-3">
-            {{ row.product.name }}
-          </td>
-
-
-          <!-- status -->
-          <td class="px-4 py-3">
-
-            <span
-              class="px-2 py-1 text-xs font-medium rounded-full"
-              [ngClass]="{
-
-                'bg-green-100 text-green-700':
-                row.status.type === 'Active',
-
-                'bg-yellow-100 text-yellow-700':
-                row.status.type === 'Pending',
-
-                'bg-red-100 text-red-700':
-                row.status.type === 'Cancel'
-
-              }"
-            >
-
-              {{ row.status.type }}
-
-            </span>
-
-          </td>
-
-
-
-          <!-- actions -->
-          <td class="px-4 py-3">
-
-            <button
-              class="text-blue-600 hover:underline text-sm mr-2">
-
-              edit
-
-            </button>
-
-            <button
-              class="text-red-600 hover:underline text-sm">
-
-              delete
-
-            </button>
-
-          </td>
-
-
-        </tr>
-
-      </tbody>
-
-
-    </table>
-
+      <!-- Add Button -->
+      <div class="flex items-end">
+        <button
+          (click)="openAddForm()"
+          class="w-full inline-flex h-9 items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white transition hover:bg-blue-700 shadow-md"
+        >
+          <span class="text-base">+</span>
+          Add User
+        </button>
+      </div>
+    </div>
   </div>
 
+  <!-- Form -->
+  <div *ngIf="showForm" class="mb-6 rounded-xl border border-gray-200 bg-gray-50 p-5">
+    <h3 class="mb-4 text-lg font-semibold text-gray-800">
+      {{ isEditMode ? 'Edit User' : 'Add User' }}
+    </h3>
 
+    <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+      <div>
+        <label class="mb-1 block text-sm font-medium text-gray-700">Username</label>
+        <input
+          [(ngModel)]="formData.username"
+          [disabled]="isEditMode"
+          type="text"
+          class="h-11 w-full rounded-md border border-gray-300 bg-white px-3 text-sm outline-none focus:border-blue-400 disabled:bg-gray-100"
+        />
+      </div>
 
-  <!-- pagination -->
-  <div class="px-6 py-4 border-t border-gray-200">
+      <div>
+        <label class="mb-1 block text-sm font-medium text-gray-700">Email</label>
+        <input
+          [(ngModel)]="formData.email"
+          [disabled]="isEditMode"
+          type="email"
+          class="h-11 w-full rounded-md border border-gray-300 bg-white px-3 text-sm outline-none focus:border-blue-400 disabled:bg-gray-100"
+        />
+      </div>
 
-    <div class="flex items-center justify-between">
+      <div *ngIf="!isEditMode">
+        <label class="mb-1 block text-sm font-medium text-gray-700">Password</label>
+        <input
+          [(ngModel)]="formData.password"
+          type="password"
+          class="h-11 w-full rounded-md border border-gray-300 bg-white px-3 text-sm outline-none focus:border-blue-400"
+        />
+      </div>
 
+      <div>
+        <label class="mb-1 block text-sm font-medium text-gray-700">First Name</label>
+        <input
+          [(ngModel)]="formData.firstName"
+          type="text"
+          class="h-11 w-full rounded-md border border-gray-300 bg-white px-3 text-sm outline-none focus:border-blue-400"
+        />
+      </div>
 
-      <button
-        class="px-3 py-2 text-sm border rounded-lg disabled:opacity-50"
-        (click)="goToPage(currentPage - 1)"
-        [disabled]="currentPage === 1"
-      >
-        Previous
-      </button>
+      <div>
+        <label class="mb-1 block text-sm font-medium text-gray-700">Last Name</label>
+        <input
+          [(ngModel)]="formData.lastName"
+          type="text"
+          class="h-11 w-full rounded-md border border-gray-300 bg-white px-3 text-sm outline-none focus:border-blue-400"
+        />
+      </div>
 
+      <div>
+        <label class="mb-1 block text-sm font-medium text-gray-700">Phone Number</label>
+        <input
+          [(ngModel)]="formData.phoneNumber"
+          type="text"
+          class="h-11 w-full rounded-md border border-gray-300 bg-white px-3 text-sm outline-none focus:border-blue-400"
+        />
+      </div>
 
+      <div *ngIf="!isEditMode">
+        <label class="mb-1 block text-sm font-medium text-gray-700">Role</label>
+        <select
+          [(ngModel)]="formData.role"
+          class="h-11 w-full rounded-md border border-gray-300 bg-white px-3 text-sm outline-none focus:border-blue-400"
+        >
+          <option value="ROLE_ADMIN">ROLE_ADMIN</option>
+          <option value="ROLE_DOCTOR">ROLE_DOCTOR</option>
+          <option value="ROLE_PHARMACIST">ROLE_PHARMACIST</option>
+          <option value="ROLE_PATIENT">ROLE_PATIENT</option>
+          <option value="ROLE_NUTRITIONIST">ROLE_NUTRITIONIST</option>
+          <option value="ROLE_AMBULANCIER">ROLE_AMBULANCIER</option>
+          <option value="ROLE_BIOMEDICAL_ENGINEER">ROLE_BIOMEDICAL_ENGINEER</option>
+          <option value="ROLE_COORDINATOR">ROLE_COORDINATOR</option>
+        </select>
+      </div>
 
-      <ul class="hidden items-center gap-1 sm:flex">
-
-        <li *ngFor="let page of pageNumbers">
-
-          <button
-            (click)="goToPage(page)"
-
-            class="flex h-10 w-10 items-center justify-center rounded-lg text-sm font-medium"
-
-            [ngClass]="{
-
-              'bg-blue-600 text-white':
-              currentPage === page,
-
-              'text-gray-700 hover:bg-blue-50':
-              currentPage !== page
-
-            }"
-          >
-
-            {{ page }}
-
-          </button>
-
-        </li>
-
-      </ul>
-
-
-
-      <button
-        class="px-3 py-2 text-sm border rounded-lg disabled:opacity-50"
-        (click)="goToPage(currentPage + 1)"
-        [disabled]="currentPage === totalPages"
-      >
-        Next
-      </button>
-
-
+      <div *ngIf="!isEditMode">
+        <label class="mb-1 block text-sm font-medium text-gray-700">Organization ID</label>
+        <input
+          [(ngModel)]="formData.organizationId"
+          type="number"
+          class="h-11 w-full rounded-md border border-gray-300 bg-white px-3 text-sm outline-none focus:border-blue-400"
+        />
+      </div>
     </div>
 
+    <div class="mt-5 flex gap-3">
+      <button
+        (click)="submitForm()"
+        class="rounded-md bg-blue-600 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-blue-700"
+      >
+        {{ isEditMode ? 'Update User' : 'Create User' }}
+      </button>
+
+      <button
+        (click)="closeForm()"
+        class="rounded-md bg-gray-200 px-5 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-300"
+      >
+        Cancel
+      </button>
+    </div>
   </div>
 
+  <!-- Cards Grid -->
+  <div *ngIf="paginatedUsers.length > 0" class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+    <div *ngFor="let user of paginatedUsers" class="rounded-xl border border-blue-200 bg-white p-5 shadow-md transition hover:shadow-xl hover:border-blue-400 overflow-hidden">
+      <!-- Card Header with gradient -->
+      <div class="mb-4 pb-4 border-b-2 border-blue-100">
+        <div class="flex items-start justify-between">
+          <div class="flex-1">
+            <h3 class="text-lg font-bold text-blue-900">{{ user.firstName }} {{ user.lastName }}</h3>
+            <p class="text-xs text-blue-600 mt-1">@{{ user.username }}</p>
+          </div>
+          <span
+            class="inline-block rounded-full px-3 py-1 text-xs font-bold text-white"
+            [ngClass]="user.enabled ? 'bg-gradient-to-r from-green-400 to-green-600 shadow-md' : 'bg-gradient-to-r from-red-400 to-red-600 shadow-md'"
+          >
+            {{ user.enabled ? '● Active' : '● Inactive' }}
+          </span>
+        </div>
+      </div>
 
+      <!-- Card Info -->
+      <div class="mb-5 space-y-3 text-sm">
+        <div class="flex items-center gap-2">
+          <span class="text-blue-500">📧</span>
+          <div class="flex-1">
+            <p class="text-xs text-gray-600">Email</p>
+            <p class="text-gray-900 font-medium break-all">{{ user.email }}</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="text-blue-500">📱</span>
+          <div class="flex-1">
+            <p class="text-xs text-gray-600">Phone</p>
+            <p class="text-gray-900 font-medium">{{ user.phoneNumber || '-' }}</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="text-blue-500">👔</span>
+          <div class="flex-1">
+            <p class="text-xs text-gray-600">Role</p>
+            <p class="text-gray-900 font-medium">{{ user.roles[0]?.replace('ROLE_', '') }}</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="text-blue-500">🏢</span>
+          <div class="flex-1">
+            <p class="text-xs text-gray-600">Organization</p>
+            <p class="text-gray-900 font-medium">{{ user.organizationName || '-' }}</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card Actions -->
+      <div class="flex gap-2">
+        <button
+          (click)="viewUserDetail(user)"
+          class="flex-1 inline-flex items-center justify-center gap-2 rounded-lg bg-blue-100 border border-blue-300 py-2 px-3 text-sm font-semibold text-blue-600 transition hover:bg-blue-200 hover:border-blue-400 shadow-sm"
+          title="View details"
+        >
+          👁️ View
+        </button>
+
+        <button
+          (click)="openEditForm(user)"
+          class="inline-flex items-center justify-center rounded-lg bg-orange-100 border border-orange-300 px-3 py-2 text-sm font-semibold text-orange-600 transition hover:bg-orange-200 hover:border-orange-400 shadow-sm"
+          title="Edit"
+        >
+          ✏️
+        </button>
+
+        <button
+          (click)="deleteUser(user.id)"
+          class="inline-flex items-center justify-center rounded-lg bg-red-100 border border-red-300 px-3 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-200 hover:border-red-400 shadow-sm"
+          title="Delete"
+        >
+          🗑️
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Empty State -->
+  <div *ngIf="!errorMessage && paginatedUsers.length === 0" class="rounded-xl border-2 border-dashed border-blue-200 bg-blue-50 py-12 text-center">
+    <p class="text-lg text-blue-600 font-semibold">📭 No users found</p>
+    <p class="mt-2 text-sm text-blue-500">Try adjusting your filters or add a new user</p>
+  </div>
+
+  <!-- Footer info -->
+  <div class="mt-6 text-sm text-blue-600 font-medium">
+    📊 Showing
+    <span class="font-bold">{{ paginatedUsers.length > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0 }}</span>
+    to
+    <span class="font-bold">{{ ((currentPage - 1) * itemsPerPage) + paginatedUsers.length }}</span>
+    of
+    <span class="font-bold">{{ filteredUsers.length }}</span>
+    rows
+  </div>
+
+  <!-- Pagination -->
+  <div class="mt-4 flex gap-2 flex-wrap">
+    <button
+      *ngFor="let page of [].constructor(totalPages); let i = index"
+      (click)="goToPage(i + 1)"
+      class="min-w-[42px] rounded-lg border-2 px-3 py-2 text-sm font-semibold transition shadow-sm"
+      [ngClass]="currentPage === (i + 1) ? 'border-blue-600 bg-blue-600 text-white' : 'border-blue-200 bg-white text-blue-600 hover:border-blue-400'"
+    >
+      {{ i + 1 }}
+    </button>
+  </div>
+
+  <!-- User Detail Modal -->
+  <div *ngIf="showDetailModal && selectedUserDetail" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60 p-4 backdrop-blur-sm">
+    <div class="w-full max-w-2xl rounded-xl bg-white shadow-2xl overflow-hidden border border-blue-200 transform transition">
+      <!-- Modal Header with Gradient -->
+      <div class="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-5 flex items-center justify-between">
+        <h2 class="text-2xl font-bold text-white">👤 User Profile</h2>
+        <button
+          (click)="closeDetailModal()"
+          class="text-white hover:text-gray-100 text-2xl transition"
+        >
+          ✕
+        </button>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="px-6 py-6 space-y-5">
+        <!-- Basic Info -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+            <label class="text-xs font-bold text-blue-600 uppercase tracking-wide">👤 Full Name</label>
+            <p class="mt-2 text-lg font-bold text-gray-900">{{ selectedUserDetail.firstName }} {{ selectedUserDetail.lastName }}</p>
+          </div>
+
+          <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+            <label class="text-xs font-bold text-blue-600 uppercase tracking-wide">📝 Username</label>
+            <p class="mt-2 text-lg font-bold text-gray-900">@{{ selectedUserDetail.username }}</p>
+          </div>
+
+          <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+            <label class="text-xs font-bold text-blue-600 uppercase tracking-wide">📧 Email</label>
+            <p class="mt-2 text-sm font-medium text-gray-900 break-all">{{ selectedUserDetail.email }}</p>
+          </div>
+
+          <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+            <label class="text-xs font-bold text-blue-600 uppercase tracking-wide">📱 Phone</label>
+            <p class="mt-2 text-lg font-bold text-gray-900">{{ selectedUserDetail.phoneNumber || '—' }}</p>
+          </div>
+        </div>
+
+        <!-- Role & Organization -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div class="bg-orange-50 p-4 rounded-lg border border-orange-200">
+            <label class="text-xs font-bold text-orange-600 uppercase tracking-wide">👔 Role</label>
+            <p class="mt-2 text-lg font-bold text-gray-900">{{ selectedUserDetail.roles[0]?.replace('ROLE_', '') }}</p>
+          </div>
+
+          <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+            <label class="text-xs font-bold text-purple-600 uppercase tracking-wide">🏢 Organization</label>
+            <p class="mt-2 text-lg font-bold text-gray-900">{{ selectedUserDetail.organizationName || '—' }}</p>
+          </div>
+        </div>
+
+        <!-- Status -->
+        <div class="border-t border-blue-100 pt-4">
+          <label class="text-xs font-bold text-blue-600 uppercase tracking-wide mb-3 block">✓ Status</label>
+          <div class="flex gap-2">
+            <span
+              class="inline-block rounded-full px-4 py-2 text-sm font-bold text-white shadow-md"
+              [ngClass]="selectedUserDetail.enabled 
+                ? 'bg-gradient-to-r from-green-400 to-green-600' 
+                : 'bg-gradient-to-r from-red-400 to-red-600'"
+            >
+              {{ selectedUserDetail.enabled ? '● ACTIVE' : '● INACTIVE' }}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="border-t border-blue-100 bg-blue-50 px-6 py-4 flex gap-3">
+        <button
+          (click)="openEditForm(selectedUserDetail)"
+          class="flex-1 rounded-lg bg-gradient-to-r from-orange-500 to-orange-600 px-4 py-3 text-sm font-bold text-white transition hover:from-orange-600 hover:to-orange-700 shadow-md"
+        >
+          ✏️ Edit User
+        </button>
+
+        <button
+          (click)="closeDetailModal()"
+          class="flex-1 rounded-lg border-2 border-blue-300 bg-white px-4 py-3 text-sm font-bold text-blue-600 transition hover:bg-blue-50 hover:border-blue-400"
+        >
+          ✕ Close
+        </button>
+      </div>
+    </div>
+  </div>
 </div>

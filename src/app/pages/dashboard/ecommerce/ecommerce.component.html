@@ -1,23 +1,54 @@
-<div class="grid grid-cols-12 gap-4 md:gap-6">
-  <div class="col-span-12 space-y-6 xl:col-span-7">
-    <div><app-ecommerce-metrics /></div>
-
-    <div><app-monthly-sales-chart /></div>
+<div class="space-y-6">
+  <!-- Header -->
+  <div class="rounded-xl border border-blue-200 bg-gradient-to-r from-blue-50 to-blue-100 p-6 shadow-md">
+    <h1 class="text-3xl font-bold text-blue-900">📊 Dashboard</h1>
+    <p class="mt-2 text-blue-600">Welcome to your management dashboard</p>
   </div>
 
-  <div class="col-span-12 xl:col-span-5">
-    <app-monthly-target />
+  <!-- Users Statistics Section -->
+  <div>
+    <app-users-stats />
   </div>
 
-  <div class="col-span-12">
-    <app-statics-chart />
-  </div>
+  <!-- Quick Stats Cards -->
+  <div class="grid grid-cols-1 gap-6 md:grid-cols-3">
+    <!-- Users Management -->
+    <div class="rounded-xl border border-blue-200 bg-white p-6 shadow-md hover:shadow-lg transition">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-sm font-medium text-gray-600">Users Management</p>
+          <h3 class="mt-2 text-lg font-bold text-blue-900">View & Edit</h3>
+        </div>
+        <div class="text-4xl">👥</div>
+      </div>
+      <a href="/users" class="mt-4 inline-block text-sm font-semibold text-blue-600 hover:text-blue-800">Go to Users →</a>
+    </div>
 
-  <div class="col-span-12 xl:col-span-5">
-    <app-demographic-card />
-  </div>
+    <!-- Profile -->
+    <div class="rounded-xl border border-green-200 bg-white p-6 shadow-md hover:shadow-lg transition">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-sm font-medium text-gray-600">Your Profile</p>
+          <h3 class="mt-2 text-lg font-bold text-green-900">Account Settings</h3>
+        </div>
+        <div class="text-4xl">⚙️</div>
+      </div>
+      <a href="/profile" class="mt-4 inline-block text-sm font-semibold text-green-600 hover:text-green-800">View Profile →</a>
+    </div>
 
-  <div class="col-span-12 xl:col-span-7">
-    <app-recent-orders/>
+    <!-- System Status -->
+    <div class="rounded-xl border border-purple-200 bg-white p-6 shadow-md hover:shadow-lg transition">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-sm font-medium text-gray-600">System Status</p>
+          <h3 class="mt-2 text-lg font-bold text-purple-900">
+            <span class="inline-block w-3 h-3 bg-green-500 rounded-full mr-2"></span>
+            Online
+          </h3>
+        </div>
+        <div class="text-4xl">✓</div>
+      </div>
+      <p class="mt-4 text-xs text-purple-600">All systems operational</p>
+    </div>
   </div>
 </div>
