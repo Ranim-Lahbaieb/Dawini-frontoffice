@@ -9,6 +9,7 @@ import { SigninFormComponent } from './shared/components/auth/signin-form/signin
 import { AuthGuard } from './guards/auth.guard';
 import { Oauth2SuccessComponent } from './oauth2-success/oauth2-success.component';
 import { EcommerceComponent } from './pages/dashboard/ecommerce/ecommerce.component';
+import { ChatComponent } from './shared/components/chat/chat.component';
 
 export const routes: Routes = [
   {
@@ -29,6 +30,11 @@ export const routes: Routes = [
       {
         path: 'users',
         component: UserListComponent
+      },
+      {
+        path: 'chat',
+        component: ChatComponent, 
+        title: 'Messagerie | Dawini'
       },
       {
         path: 'users/add',

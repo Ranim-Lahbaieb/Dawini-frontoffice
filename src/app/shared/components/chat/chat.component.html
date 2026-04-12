@@ -1,0 +1,164 @@
+<div class="chat-wrapper">
+  <!-- Header with Navigation -->
+  <div class="chat-header">
+    <div class="header-content">
+      <h2 class="header-title">Messagerie</h2>
+      <p class="header-subtitle">Équipe médicale</p>
+    </div>
+    <div class="online-status"></div>
+  </div>
+
+  <div class="chat-main">
+    <!-- Sidebar with Conversations and Navigation -->
+    <div class="chat-sidebar">
+      <div class="sidebar-tabs">
+        <button 
+          class="sidebar-tab" 
+          [class.active]="view === 'conversations'"
+          (click)="view = 'conversations'">
+          💬 Conversations
+          <span *ngIf="conversations.length > 0" class="badge">{{ conversations.length }}</span>
+        </button>
+        <button 
+          class="sidebar-tab" 
+          [class.active]="view === 'invitations'"
+          (click)="view = 'invitations'">
+          📬 Invitations
+          <span *ngIf="getPendingInvitations().length > 0" class="badge red">{{ getPendingInvitations().length }}</span>
+        </button>
+        <button 
+          class="sidebar-tab" 
+          [class.active]="view === 'send-invitation'"
+          (click)="view = 'send-invitation'">
+          ➕ Nouvelle
+        </button>
+      </div>
+
+      <!-- Conversations List -->
+      <div *ngIf="view === 'conversations'" class="conversations-list">
+        <div *ngIf="conversations.length === 0" class="empty-message">
+          <p>Aucune conversation</p>
+          <small>Envoyez une invitation pour commencer</small>
+        </div>
+        <div *ngFor="let conv of conversations" 
+          class="conversation-item"
+          [class.active]="selectedConversation?.id === conv.id"
+          (click)="selectConversation(conv)">
+          <div class="conv-avatar">👤</div>
+          <div class="conv-info">
+            <p class="conv-name">{{ getContactName(conv) }}</p>
+            <p class="conv-last">{{ conv.lastMessage || 'Aucun message' }}</p>
+          </div>
+          <span *ngIf="conv.unreadCount && conv.unreadCount > 0" class="unread">{{ conv.unreadCount }}</span>
+        </div>
+      </div>
+
+      <!-- Invitations List -->
+      <div *ngIf="view === 'invitations'" class="invitations-list">
+        <!-- Received Invitations -->
+        <div *ngIf="getPendingInvitations().length > 0">
+          <h4 class="section-title">Invitations reçues</h4>
+          <div *ngFor="let inv of getPendingInvitations()" class="invitation-item received">
+            <div class="inv-info">
+              <p class="inv-name">{{ inv.senderName }}</p>
+              <p class="inv-message" *ngIf="inv.message">"{{ inv.message }}"</p>
+            </div>
+            <div class="inv-actions">
+              <button class="btn-accept" (click)="acceptInvitation(inv)" title="Accepter">✓</button>
+              <button class="btn-decline" (click)="declineInvitation(inv)" title="Refuser">✕</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sent Invitations -->
+        <div *ngIf="getSentInvitations().length > 0">
+          <h4 class="section-title" style="margin-top: 16px;">Invitations envoyées</h4>
+          <div *ngFor="let inv of getSentInvitations()" class="invitation-item sent">
+            <div class="inv-info">
+              <p class="inv-name">{{ inv.receiverName }}</p>
+              <p class="inv-status">⏳ En attente</p>
+            </div>
+          </div>
+        </div>
+
+        <div *ngIf="getPendingInvitations().length === 0 && getSentInvitations().length === 0" class="empty-message">
+          <p>Aucune invitation</p>
+          <small>Créez une nouvelle conversation pour commencer</small>
+        </div>
+      </div>
+
+      <!-- Send Invitation Form -->
+      <div *ngIf="view === 'send-invitation'" class="send-invitation-form">
+        <h3>Nouvelle conversation</h3>
+        <div class="form-group">
+          <label>Sélectionner une personne</label>
+          <select [(ngModel)]="invitationForm.receiverId" class="form-select">
+            <option value="" disabled>Choisir...</option>
+            <option *ngFor="let user of availableUsers" [value]="user.id">{{ user.name }}</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Message</label>
+          <textarea [(ngModel)]="invitationForm.message" class="form-textarea" rows="3"></textarea>
+        </div>
+        <button 
+          class="btn-send-invite" 
+          (click)="sendInvitation()"
+          [disabled]="!invitationForm.receiverId">
+          Envoyer l'invitation
+        </button>
+      </div>
+    </div>
+
+    <!-- Chat View -->
+    <div class="chat-content" [class.hidden]="!selectedConversation">
+      <ng-container *ngIf="selectedConversation">
+        <!-- Chat Messages -->
+        <div class="chat-messages" *ngIf="messages.length > 0; else noMessages">
+          <div *ngFor="let msg of messages; let last = last" 
+               [ngClass]="{'message-sent': msg.senderId === currentUserId, 'message-received': msg.senderId !== currentUserId}"
+               class="message-group">
+            
+            <div class="message-container">
+              <div *ngIf="msg.senderId !== currentUserId" class="avatar">👤</div>
+              
+              <div class="message-bubble">{{ msg.content }}</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- No Messages -->
+        <ng-template #noMessages>
+          <div class="empty-state">
+            <div class="empty-icon">💬</div>
+            <p class="empty-text">Pas encore de messages</p>
+            <p class="empty-subtext">Commencez la conversation</p>
+          </div>
+        </ng-template>
+
+        <!-- Input Section -->
+        <div class="chat-input-section">
+          <div class="input-wrapper">
+            <input type="text" 
+                   [(ngModel)]="newMessage" 
+                   (keyup.enter)="sendMessage()" 
+                   class="chat-input" 
+                   placeholder="Écrire un message...">
+            <button (click)="sendMessage()" 
+                    class="send-button" 
+                    [disabled]="!newMessage.trim()"
+                    [title]="!newMessage.trim() ? 'Écrivez un message' : 'Envoyer le message'">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M16.6915026,12.4744748 L3.50612381,13.2599618 C3.19218622,13.2599618 3.03521743,13.4170592 3.03521743,13.5741566 L1.15159189,20.0151496 C0.8376543,20.8006365 0.99,21.89 1.77946707,22.52 C2.41,22.99 3.50612381,23.1 4.13399899,22.8429026 L21.714504,14.0454487 C22.6563168,13.5741566 23.1272231,12.6315722 22.9702544,11.6889879 L4.13399899,1.16345286 C3.34915502,0.9 2.40734225,0.9 1.77946707,1.4430013 C0.994623095,2.0788752 0.837654326,3.0214595 1.15159189,3.8429026 L3.03521743,10.2839957 C3.03521743,10.4410931 3.19218622,10.5981905 3.50612381,10.5981905 L16.6915026,11.3836773 C16.6915026,11.3836773 17.1624089,11.3836773 17.1624089,10.8406747 L17.1624089,12.0274561 C17.1624089,12.4987482 16.6915026,12.4744748 16.6915026,12.4744748 Z" fill="currentColor"></path>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </ng-container>
+
+      <div *ngIf="!selectedConversation" class="no-conversation">
+        <p>Sélectionnez une conversation pour commencer à discuter</p>
+      </div>
+    </div>
+  </div>
+</div>

@@ -39,6 +39,11 @@ export class AppSidebarComponent {
       icon: '👤',
       path: '/users'
     },
+    {
+      name: 'Chat',
+      icon: '💬',
+      path: '/chat'
+    },
  
   ];
 
