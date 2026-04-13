@@ -1,24 +1,39 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { ConnectionRequestDto, UserSummary } from '../models/chat.model';
 
-@Injectable({
-  providedIn: 'root'
-})
+@Injectable({ providedIn: 'root' })
 export class ConnectionService {
-  private url = 'http://localhost:8080/api/connections';
+  private readonly url = 'http://localhost:8020/api/connections';
 
-  constructor(private http: HttpClient) { }
+  constructor(private http: HttpClient) {}
 
-  sendInvitation(senderId: number, receiverId: number): Observable<any> {
-    return this.http.post(`${this.url}/send?senderId=${senderId}&receiverId=${receiverId}`, {});
+  sendInvitation(receiverId: number): Observable<ConnectionRequestDto> {
+    return this.http.post<ConnectionRequestDto>(`${this.url}/send`, { receiverId });
   }
 
-  getPendingRequests(userId: number): Observable<any[]> {
-    return this.http.get<any[]>(`${this.url}/pending/${userId}`);
+  acceptRequest(requestId: number): Observable<ConnectionRequestDto> {
+    return this.http.put<ConnectionRequestDto>(`${this.url}/${requestId}/accept`, {});
   }
 
-  acceptRequest(requestId: number): Observable<any> {
-    return this.http.put(`${this.url}/accept/${requestId}`, {});
+  rejectRequest(requestId: number): Observable<ConnectionRequestDto> {
+    return this.http.put<ConnectionRequestDto>(`${this.url}/${requestId}/reject`, {});
+  }
+
+  getPending(): Observable<ConnectionRequestDto[]> {
+    return this.http.get<ConnectionRequestDto[]>(`${this.url}/pending`);
+  }
+
+  getSent(): Observable<ConnectionRequestDto[]> {
+    return this.http.get<ConnectionRequestDto[]>(`${this.url}/sent`);
+  }
+
+  getAccepted(): Observable<UserSummary[]> {
+    return this.http.get<UserSummary[]>(`${this.url}/accepted`);
+  }
+
+  getAvailableUsers(): Observable<UserSummary[]> {
+    return this.http.get<UserSummary[]>(`${this.url}/available-users`);
   }
 }

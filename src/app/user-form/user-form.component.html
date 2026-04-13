@@ -102,7 +102,8 @@
           name="role"
           class="h-11 w-full rounded-md border border-gray-300 px-3 text-sm outline-none focus:border-blue-400"
         >
-          <option value="ROLE_ADMIN">ROLE_ADMIN</option>
+          <option *ngIf="isAdmin" value="ROLE_ADMIN">ROLE_ADMIN</option>
+          <option *ngIf="isAdmin" value="ROLE_MANAGER">ROLE_MANAGER</option>
           <option value="ROLE_DOCTOR">ROLE_DOCTOR</option>
           <option value="ROLE_PHARMACIST">ROLE_PHARMACIST</option>
           <option value="ROLE_PATIENT">ROLE_PATIENT</option>
@@ -117,7 +118,7 @@
       </div>
 
       <!-- Organization -->
-      <div>
+      <div *ngIf="!isManager || isAdmin">
         <label class="mb-2 block text-sm font-medium text-gray-700">Organization</label>
         <select
           [(ngModel)]="formData.organizationId"

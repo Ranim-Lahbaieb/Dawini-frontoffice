@@ -1,200 +1,266 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import {
+  AfterViewChecked,
+  Component,
+  ElementRef,
+  OnDestroy,
+  OnInit,
+  ViewChild
+} from '@angular/core';
+import { CommonModule, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ConversationService } from '../../services/conversation.service';
-import { Conversation, ConversationInvitation, ChatMessage } from '../../models/conversation.model';
 import { Subscription } from 'rxjs';
-import * as Stomp from 'stompjs';
+
+import { ConnectionService } from '../../services/connection.service';
+import { ChatApiService } from '../../services/chat-api.service';
+import { ChatWsService } from '../../services/chat-ws.service';
+import { AuthService } from '../../services/auth.service';
+import { ChatNotificationService } from '../../services/chat-notification.service';
+import {
+  ChatMessageDto,
+  ConnectionRequestDto,
+  UserSummary
+} from '../../models/chat.model';
+
+type View = 'conversations' | 'invitations' | 'send-invitation' | 'global';
 
 @Component({
   selector: 'app-chat',
   templateUrl: './chat.component.html',
   styleUrls: ['./chat.component.css'],
   standalone: true,
-  imports: [CommonModule, FormsModule]
+  imports: [CommonModule, FormsModule, DatePipe]
 })
-export class ChatComponent implements OnInit, OnDestroy {
-  // User info
-  public currentUserId = "1";
-  public currentUserName = "Dr. Ahmed";
+export class ChatComponent implements OnInit, OnDestroy, AfterViewChecked {
 
-  // UI State
-  public view: 'conversations' | 'invitations' | 'send-invitation' = 'conversations';
-  public selectedConversation: Conversation | null = null;
+  @ViewChild('messagesScroll') private messagesScroll?: ElementRef<HTMLDivElement>;
+  @ViewChild('globalScroll') private globalScroll?: ElementRef<HTMLDivElement>;
+  private shouldScrollPrivate = false;
+  private shouldScrollGlobal = false;
 
-  // Data
-  public conversations: Conversation[] = [];
-  public invitations: ConversationInvitation[] = [];
-  public messages: ChatMessage[] = [];
-  public newMessage: string = "";
-  
-  // Form
-  public invitationForm = {
-    receiverId: '',
-    receiverName: '',
-    message: 'Je voudrais discuter avec vous'
-  };
+  // ---- current user ----
+  currentUserId: number | null = null;
+  currentUserName = '';
+  isAdmin = false;
 
-  // Mock users list (replace with API call)
-  public availableUsers = [
-    { id: '2', name: 'Dr. Fatima' },
-    { id: '3', name: 'Dr. Mohamed' },
-    { id: '4', name: 'Nurse Sarah' },
-  ];
+  // ---- UI state ----
+  view: View = 'conversations';
+  selectedContact: UserSummary | null = null;
 
-  private stompClient: any;
-  private subscriptions: Subscription[] = [];
-  private messageSubscription: any;
+  // ---- data ----
+  contacts: UserSummary[] = [];                     // accepted connections (private convos)
+  receivedInvitations: ConnectionRequestDto[] = [];
+  sentInvitations: ConnectionRequestDto[] = [];
+  availableUsers: UserSummary[] = [];
+  messages: ChatMessageDto[] = [];                  // messages for selected private conv
+  globalMessages: ChatMessageDto[] = [];
 
-  constructor(private conversationService: ConversationService) {}
+  newMessage = '';
+  newGlobalMessage = '';
+  userSearchQuery = '';
 
-  ngOnInit() {
-    this.setupConversationListeners();
-    this.connect();
-  }
+  private subs: Subscription[] = [];
 
-  private setupConversationListeners() {
-    this.subscriptions.push(
-      this.conversationService.getConversations().subscribe(convs => {
-        this.conversations = convs;
+  constructor(
+    private auth: AuthService,
+    private connections: ConnectionService,
+    private chatApi: ChatApiService,
+    private chatWs: ChatWsService,
+    private chatNotifications: ChatNotificationService
+  ) {}
+
+  // ========================= lifecycle =========================
+
+  async ngOnInit() {
+    const user = this.auth.getUser();
+    if (user) this.applyUser(user);
+    else {
+      this.auth.user$.subscribe(u => { if (u) this.applyUser(u); });
+      this.auth.loadUser();
+    }
+
+    this.refreshAll();
+
+    try {
+      await this.chatWs.connect();
+    } catch (e) {
+      console.error('WebSocket connection failed', e);
+    }
+
+    this.subs.push(
+      this.chatWs.onPrivateMessage.subscribe(msg => this.handleIncomingPrivate(msg)),
+      this.chatWs.onGlobalMessage.subscribe(msg => {
+        this.globalMessages.push(msg);
+        this.shouldScrollGlobal = true;
       }),
-      this.conversationService.getInvitations().subscribe(invs => {
-        this.invitations = invs;
-      }),
-      this.conversationService.getMessages().subscribe(msgs => {
-        this.messages = msgs.filter(m => 
-          this.selectedConversation ? m.conversationId === this.selectedConversation.id : false
-        );
-      }),
-      this.conversationService.getCurrentConversation().subscribe(id => {
-        const conv = this.conversations.find(c => c.id === id);
-        this.selectedConversation = conv || null;
-      })
+      this.chatWs.onInvitation.subscribe(inv => this.handleIncomingInvitation(inv))
     );
   }
 
-  async connect() {
-    try {
-      const SockJS = (await import('sockjs-client')).default;
-      const socket = new SockJS('http://localhost:8080/ws-chat');
-      
-      this.stompClient = Stomp.over(socket);
-      this.stompClient.debug = () => {};
+  ngOnDestroy() {
+    this.subs.forEach(s => s.unsubscribe());
+    // WS connection is owned by ChatNotificationService so that
+    // notifications keep flowing when navigating away from /chat.
+    this.chatNotifications.activeContactId = null;
+  }
 
-      this.stompClient.connect({}, () => {
-        console.log('WebSocket connecté');
-        
-        // Subscribe to messages
-        this.messageSubscription = this.stompClient.subscribe(
-          '/user/' + this.currentUserId + '/topic/messages',
-          (message: any) => {
-            if (message.body) {
-              const msg = JSON.parse(message.body);
-              if (this.selectedConversation && msg.conversationId === this.selectedConversation.id) {
-                this.conversationService.addMessage(msg);
-              }
-            }
-          }
-        );
-
-        // Subscribe to invitations
-        this.stompClient.subscribe(
-          '/user/' + this.currentUserId + '/topic/invitations',
-          (message: any) => {
-            if (message.body) {
-              const invitation = JSON.parse(message.body);
-              this.conversationService.getInvitations();
-            }
-          }
-        );
-      }, (error: any) => {
-        console.error('Erreur WebSocket:', error);
-      });
-    } catch (error) {
-      console.error('Erreur chargement SockJS:', error);
+  ngAfterViewChecked() {
+    if (this.shouldScrollPrivate && this.messagesScroll) {
+      const el = this.messagesScroll.nativeElement;
+      el.scrollTop = el.scrollHeight;
+      this.shouldScrollPrivate = false;
+    }
+    if (this.shouldScrollGlobal && this.globalScroll) {
+      const el = this.globalScroll.nativeElement;
+      el.scrollTop = el.scrollHeight;
+      this.shouldScrollGlobal = false;
     }
   }
 
-  selectConversation(conversation: Conversation) {
-    this.conversationService.selectConversation(conversation.id!);
-    this.selectedConversation = conversation;
+  private applyUser(u: any) {
+    this.currentUserId = u?.id ?? null;
+    this.currentUserName = `${u?.firstName ?? ''} ${u?.lastName ?? ''}`.trim();
+    const roles: string[] = (u?.roles ?? []).map((r: any) => r?.name ?? r);
+    this.isAdmin = roles.includes('ROLE_ADMIN');
+  }
+
+  // ========================= data loading =========================
+
+  refreshAll() {
+    this.loadContacts();
+    this.loadInvitations();
+    this.loadAvailableUsers();
+    this.loadGlobalHistory();
+  }
+
+  private loadContacts() {
+    this.connections.getAccepted().subscribe({
+      next: list => this.contacts = list,
+      error: err => console.error('getAccepted', err)
+    });
+  }
+
+  private loadInvitations() {
+    this.connections.getPending().subscribe({
+      next: list => this.receivedInvitations = list,
+      error: err => console.error('getPending', err)
+    });
+    this.connections.getSent().subscribe({
+      next: list => this.sentInvitations = list.filter(r => r.status === 'PENDING'),
+      error: err => console.error('getSent', err)
+    });
+  }
+
+  private loadAvailableUsers() {
+    this.connections.getAvailableUsers().subscribe({
+      next: list => this.availableUsers = list,
+      error: err => console.error('getAvailableUsers', err)
+    });
+  }
+
+  private loadGlobalHistory() {
+    this.chatApi.getGlobalHistory().subscribe({
+      next: list => { this.globalMessages = list; this.shouldScrollGlobal = true; },
+      error: err => console.error('getGlobalHistory', err)
+    });
+  }
+
+  // ========================= conversations =========================
+
+  selectContact(contact: UserSummary) {
+    this.selectedContact = contact;
     this.view = 'conversations';
-  }
-
-  getPendingInvitations() {
-    return this.invitations.filter(inv => inv.status === 'pending' && inv.receiverId === this.currentUserId);
-  }
-
-  getSentInvitations() {
-    return this.invitations.filter(inv => inv.status === 'pending' && inv.senderId === this.currentUserId);
-  }
-
-  acceptInvitation(invitation: ConversationInvitation) {
-    this.conversationService.acceptInvitation(invitation.id!);
-  }
-
-  declineInvitation(invitation: ConversationInvitation) {
-    this.conversationService.declineInvitation(invitation.id!);
-  }
-
-  sendInvitation() {
-    if (!this.invitationForm.receiverId) return;
-
-    const invitation: ConversationInvitation = {
-      senderId: this.currentUserId,
-      senderName: this.currentUserName,
-      receiverId: this.invitationForm.receiverId,
-      receiverName: this.invitationForm.receiverName,
-      message: this.invitationForm.message,
-      status: 'pending'
-    };
-
-    this.conversationService.sendInvitation(invitation);
-    this.resetInvitationForm();
-    this.view = 'invitations';
-  }
-
-  private resetInvitationForm() {
-    this.invitationForm = {
-      receiverId: '',
-      receiverName: '',
-      message: 'Je voudrais discuter avec vous'
-    };
+    this.chatNotifications.activeContactId = contact.id;
+    this.chatApi.getPrivateConversation(contact.id).subscribe({
+      next: list => { this.messages = list; this.shouldScrollPrivate = true; },
+      error: err => console.error('getPrivateConversation', err)
+    });
   }
 
   sendMessage() {
-    if (!this.selectedConversation || !this.newMessage.trim()) return;
-
-    const message: ChatMessage = {
-      conversationId: this.selectedConversation.id!,
-      senderId: this.currentUserId,
-      senderName: this.currentUserName,
-      content: this.newMessage
-    };
-
-    this.conversationService.addMessage(message);
-
-    // Send via WebSocket
-    if (this.stompClient && this.stompClient.connected) {
-      this.stompClient.send('/app/chat', {}, JSON.stringify(message));
-    }
-
-    this.newMessage = "";
+    if (!this.selectedContact || !this.newMessage.trim()) return;
+    const receiverId = this.selectedContact.id;
+    const content = this.newMessage.trim();
+    this.newMessage = '';
+    this.chatApi.sendPrivate(receiverId, content).subscribe({
+      next: saved => {
+        if (!this.messages.some(m => m.id === saved.id)) {
+          this.messages.push(saved);
+          this.shouldScrollPrivate = true;
+        }
+      },
+      error: err => console.error('sendPrivate', err)
+    });
   }
 
-  getContactName(conversation: Conversation): string {
-    return conversation.participantIds[0] === this.currentUserId 
-      ? conversation.participantNames[1] 
-      : conversation.participantNames[0];
+  private handleIncomingPrivate(msg: ChatMessageDto) {
+    if (!this.selectedContact || this.currentUserId == null) return;
+    const otherId = this.selectedContact.id;
+    const belongsToOpenConv =
+      (msg.senderId === otherId && msg.receiverId === this.currentUserId) ||
+      (msg.senderId === this.currentUserId && msg.receiverId === otherId);
+    if (belongsToOpenConv && !this.messages.some(m => m.id === msg.id)) {
+      this.messages.push(msg);
+      this.shouldScrollPrivate = true;
+    }
   }
 
-  ngOnDestroy() {
-    this.subscriptions.forEach(sub => sub.unsubscribe());
-    if (this.messageSubscription) {
-      this.messageSubscription.unsubscribe();
-    }
-    if (this.stompClient && this.stompClient.connected) {
-      this.stompClient.disconnect(() => {});
-    }
+  // ========================= invitations =========================
+
+  acceptInvitation(inv: ConnectionRequestDto) {
+    this.connections.acceptRequest(inv.id).subscribe({
+      next: () => { this.loadInvitations(); this.loadContacts(); this.loadAvailableUsers(); },
+      error: err => console.error('accept', err)
+    });
+  }
+
+  rejectInvitation(inv: ConnectionRequestDto) {
+    this.connections.rejectRequest(inv.id).subscribe({
+      next: () => { this.loadInvitations(); this.loadAvailableUsers(); },
+      error: err => console.error('reject', err)
+    });
+  }
+
+  sendInvitationTo(user: UserSummary) {
+    this.connections.sendInvitation(user.id).subscribe({
+      next: () => {
+        this.userSearchQuery = '';
+        this.loadInvitations();
+        this.loadAvailableUsers();
+        this.view = 'invitations';
+      },
+      error: err => console.error('sendInvitation', err)
+    });
+  }
+
+  get filteredAvailableUsers(): UserSummary[] {
+    const q = this.userSearchQuery.trim().toLowerCase();
+    if (!q) return this.availableUsers;
+    return this.availableUsers.filter(u =>
+      `${u.firstName} ${u.lastName} ${u.username}`.toLowerCase().includes(q)
+    );
+  }
+
+  private handleIncomingInvitation(inv: ConnectionRequestDto) {
+    // Any invitation update (sent-to-me pending, accepted/rejected reply) — just refetch.
+    this.loadInvitations();
+    if (inv.status === 'ACCEPTED') this.loadContacts();
+  }
+
+  // ========================= global chat =========================
+
+  sendGlobalMessage() {
+    if (!this.isAdmin || !this.newGlobalMessage.trim()) return;
+    this.chatWs.sendGlobal(this.newGlobalMessage.trim());
+    this.newGlobalMessage = '';
+  }
+
+  // ========================= view helpers =========================
+
+  fullName(u: UserSummary): string {
+    return `${u.firstName} ${u.lastName}`.trim();
+  }
+
+  isMine(msg: ChatMessageDto): boolean {
+    return this.currentUserId != null && msg.senderId === this.currentUserId;
   }
 }

@@ -9,6 +9,7 @@ import { Organization } from '../models/organization.model';
 
 import { UserService } from '../shared/services/user.service';
 import { OrganizationService } from '../shared/services/organization.service';
+import { AuthService } from '../shared/services/auth.service';
 
 @Component({
   selector: 'app-user-form',
@@ -21,6 +22,9 @@ export class UserFormComponent implements OnInit {
   userId: number | null = null;
 
   organizations: Organization[] = [];
+
+  isAdmin = false;
+  isManager = false;
 
   errorMessage = '';
   successMessage = '';
@@ -50,8 +54,8 @@ export class UserFormComponent implements OnInit {
     lastName: '',
     phoneNumber: '',
     picture: null,
-    organizationId: 1,
-    role: 'ROLE_ADMIN',
+    organizationId: null as any,
+    role: 'ROLE_DOCTOR',
     enabled: true
   };
 
@@ -59,13 +63,35 @@ export class UserFormComponent implements OnInit {
     private route: ActivatedRoute,
     private router: Router,
     private userService: UserService,
-    private organizationService: OrganizationService
+    private organizationService: OrganizationService,
+    private auth: AuthService
   ) {}
 
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id');
 
-    this.loadOrganizations();
+    const applyRoles = (u: any) => {
+      const roles: string[] = (u?.roles ?? []).map((r: any) => r?.name ?? r);
+      this.isAdmin = roles.includes('ROLE_ADMIN');
+      this.isManager = roles.includes('ROLE_MANAGER');
+      if (this.isManager && !this.isAdmin && u?.organizationId != null) {
+        this.formData.organizationId = u.organizationId;
+      }
+      if (!this.isAdmin && this.formData.role === 'ROLE_ADMIN') {
+        this.formData.role = 'ROLE_DOCTOR';
+      }
+    };
+
+    const cached = this.auth.getUser();
+    if (cached) applyRoles(cached);
+    else {
+      this.auth.user$.subscribe(u => { if (u) applyRoles(u); });
+      this.auth.loadUser();
+    }
+
+    if (!this.isManager || this.isAdmin) {
+      this.loadOrganizations();
+    }
 
     if (id) {
       this.isEditMode = true;
@@ -149,8 +175,12 @@ export class UserFormComponent implements OnInit {
       this.formErrors.role = 'Role is required.';
     }
 
-    if (!this.formData.organizationId) {
+    if (!this.isManager && !this.formData.organizationId) {
       this.formErrors.organizationId = 'Organization is required.';
+    }
+
+    if (!this.isAdmin && this.formData.role === 'ROLE_ADMIN') {
+      this.formErrors.role = 'Only admins can create admin users.';
     }
 
     if (!this.isEditMode) {
