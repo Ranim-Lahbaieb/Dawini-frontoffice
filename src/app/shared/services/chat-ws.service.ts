@@ -1,7 +1,7 @@
 import { Injectable, OnDestroy } from '@angular/core';
 import { Subject, Observable } from 'rxjs';
 import * as Stomp from 'stompjs';
-import { ChatMessageDto, ConnectionRequestDto } from '../models/chat.model';
+import { ChatMessageDto, ConnectionRequestDto } from '../../models/chat.model';
 import { AuthService } from './auth.service';
 
 /**

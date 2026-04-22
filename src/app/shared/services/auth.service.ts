@@ -84,4 +84,30 @@ export class AuthService {
   getUser() {
     return this.userSubject.value;
   }
+
+signin(payload: { username: string; password: string }) {
+  return this.http.post<any>('http://localhost:8020/api/auth/login', payload);
+}
+
+verify2fa(username: string, code: string) {
+  return this.http.post<any>('http://localhost:8020/api/auth/verify-2fa', {
+    username,
+    code
+  });
+}
+
+setupTwoFactor(username: string) {
+  return this.http.post<any>(`http://localhost:8020/api/auth/2fa/setup/${username}`, {});
+}
+
+enableTwoFactor(username: string, code: string) {
+  return this.http.post<any>('http://localhost:8020/api/auth/2fa/enable', {
+    username,
+    code
+  });
+}
+
+disableTwoFactor(username: string) {
+  return this.http.post<any>(`http://localhost:8020/api/auth/2fa/disable/${username}`, {});
+}
 }

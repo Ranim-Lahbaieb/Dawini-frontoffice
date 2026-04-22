@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { ConnectionRequestDto, UserSummary } from '../models/chat.model';
+import { ConnectionRequestDto, UserSummary } from '../../models/chat.model';
 
 @Injectable({ providedIn: 'root' })
 export class ConnectionService {

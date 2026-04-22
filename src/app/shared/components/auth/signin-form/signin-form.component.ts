@@ -18,7 +18,6 @@ export class SigninFormComponent {
 
   errorMessage = '';
   loading = false;
-  
 
   constructor(
     private authService: AuthService,
@@ -28,9 +27,10 @@ export class SigninFormComponent {
   togglePasswordVisibility(): void {
     this.showPassword = !this.showPassword;
   }
-signInWithGoogle() {
-  window.location.href = 'http://localhost:8020/api/oauth2/authorization/google';
-}
+
+  signInWithGoogle(): void {
+    window.location.href = 'http://localhost:8020/api/oauth2/authorization/google';
+  }
 
   onSignIn(): void {
     this.errorMessage = '';
@@ -46,15 +46,31 @@ signInWithGoogle() {
       email: this.email,
       password: this.password
     }).subscribe({
-      next: () => {
+      next: (res) => {
         this.loading = false;
-        this.router.navigate(['/users']);
+
+        // 2FA required
+        if (res.requires2fa) {
+          localStorage.setItem('pending2faUser', res.email || this.email);
+          this.router.navigate(['/verify-2fa']);
+          return;
+        }
+
+        // Normal login
+        if (res.accessToken) {
+          localStorage.setItem('token', res.accessToken);
+        }
+
+        if (res.refreshToken) {
+          localStorage.setItem('refreshToken', res.refreshToken);
+        }
+
+        this.router.navigate(['/dashboard']);
       },
       error: (err) => {
         this.loading = false;
         this.errorMessage =
-          err?.error?.message ||
-          'Invalid email or password.';
+          err?.error?.message || 'Invalid email or password.';
       }
     });
   }

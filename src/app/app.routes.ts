@@ -2,7 +2,6 @@ import { Routes } from '@angular/router';
 import { ProfileComponent } from './pages/profile/profile.component';
 import { NotFoundComponent } from './pages/other-page/not-found/not-found.component';
 import { AppLayoutComponent } from './shared/layout/app-layout/app-layout.component';
-import { SignInComponent } from './pages/auth-pages/sign-in/sign-in.component';
 import { UserListComponent } from './shared/components/users-list/users-list.component';
 import { UserFormComponent } from './user-form/user-form.component';
 import { SigninFormComponent } from './shared/components/auth/signin-form/signin-form.component';
@@ -12,6 +11,8 @@ import { EcommerceComponent } from './pages/dashboard/ecommerce/ecommerce.compon
 import { ChatComponent } from './shared/components/chat/chat.component';
 
 export const routes: Routes = [
+
+  // 🔐 Partie protégée
   {
     path: '',
     component: AppLayoutComponent,
@@ -25,7 +26,7 @@ export const routes: Routes = [
       {
         path: 'profile',
         component: ProfileComponent,
-        title: 'Angular Profile Dashboard | TailAdmin - Angular Admin Dashboard Template'
+        title: 'Profile | Dawini'
       },
       {
         path: 'users',
@@ -33,8 +34,8 @@ export const routes: Routes = [
       },
       {
         path: 'chat',
-        component: ChatComponent, 
-        title: 'Messagerie | Dawini'
+        component: ChatComponent,
+        title: 'Chat | Dawini'
       },
       {
         path: 'users/add',
@@ -52,6 +53,15 @@ export const routes: Routes = [
     ]
   },
 
+  // 🔓 2FA (hors AuthGuard)
+  {
+    path: 'verify-2fa',
+    loadComponent: () =>
+      import('./shared/components/verify2fa/verify2fa.component')
+        .then(c => c.Verify2faComponent)
+  },
+
+  // 🔓 Auth pages
   {
     path: 'signin',
     component: SigninFormComponent
@@ -60,9 +70,11 @@ export const routes: Routes = [
     path: 'oauth2-success',
     component: Oauth2SuccessComponent
   },
+
+  // ❌ Not found
   {
     path: '**',
     component: NotFoundComponent,
-    title: 'Angular NotFound Dashboard | Dawini - Angular Admin Dashboard Template'
+    title: 'Not Found | Dawini'
   }
 ];

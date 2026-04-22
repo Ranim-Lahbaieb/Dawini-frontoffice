@@ -3,7 +3,7 @@ import { BehaviorSubject, Observable } from 'rxjs';
 
 import { AuthService } from './auth.service';
 import { ChatWsService } from './chat-ws.service';
-import { ChatMessageDto, ConnectionRequestDto } from '../models/chat.model';
+import { ChatMessageDto, ConnectionRequestDto } from '../../models/chat.model';
 
 export type ChatNotificationKind = 'message' | 'invitation' | 'global';
 

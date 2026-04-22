@@ -1,145 +1,172 @@
-<div class="chat-wrapper">
-  <!-- Header -->
-  <div class="chat-header">
-    <div class="header-content">
-      <h2 class="header-title">Messagerie</h2>
-      <p class="header-subtitle">Équipe médicale</p>
+<div class="chat-shell">
+  <!-- Top header -->
+  <div class="chat-topbar">
+    <div class="topbar-left">
+      <h2 class="topbar-title">Messages</h2>
+      <p class="topbar-subtitle">Medical Team</p>
     </div>
-    <div class="online-status"></div>
+    <div class="topbar-right">
+      <span class="status-dot"></span>
+      <span class="status-text">Online</span>
+    </div>
   </div>
 
-  <div class="chat-main">
+  <div class="chat-layout">
     <!-- Sidebar -->
-    <div class="chat-sidebar">
+    <aside class="chat-sidebar">
+      <div class="sidebar-search">
+        <input type="text" placeholder="Search..." class="sidebar-search-input" />
+      </div>
+
       <div class="sidebar-tabs">
         <button class="sidebar-tab" [class.active]="view === 'conversations'" (click)="view = 'conversations'">
-          💬 Conversations
+          <span>Chats</span>
           <span *ngIf="contacts.length > 0" class="badge">{{ contacts.length }}</span>
         </button>
+
         <button class="sidebar-tab" [class.active]="view === 'invitations'" (click)="view = 'invitations'">
-          📬 Invitations
-          <span *ngIf="receivedInvitations.length > 0" class="badge red">{{ receivedInvitations.length }}</span>
+          <span>Invitations</span>
+          <span *ngIf="receivedInvitations.length > 0" class="badge badge-danger">{{ receivedInvitations.length }}</span>
         </button>
+
         <button class="sidebar-tab" [class.active]="view === 'send-invitation'" (click)="view = 'send-invitation'">
-          ➕ Nouvelle
+          <span>New Chat</span>
         </button>
+
         <button class="sidebar-tab" [class.active]="view === 'global'" (click)="view = 'global'">
-          📢 Global
+          <span>Announcements</span>
         </button>
       </div>
 
-      <!-- Conversations list -->
-      <div *ngIf="view === 'conversations'" class="conversations-list">
-        <div *ngIf="contacts.length === 0" class="empty-message">
-          <p>Aucune conversation</p>
-          <small>Envoyez une invitation pour commencer</small>
+      <!-- Conversations -->
+      <div *ngIf="view === 'conversations'" class="sidebar-content">
+        <div *ngIf="contacts.length === 0" class="empty-card">
+          <p>No conversations yet</p>
+          <small>Send an invitation to start chatting</small>
         </div>
-        <div *ngFor="let contact of contacts"
-             class="conversation-item"
-             [class.active]="selectedContact?.id === contact.id"
-             (click)="selectContact(contact)">
-          <div class="conv-avatar">👤</div>
-          <div class="conv-info">
-            <p class="conv-name">{{ fullName(contact) }}</p>
-            <p class="conv-last">{{ contact.username }}</p>
+
+        <div
+          *ngFor="let contact of contacts"
+          class="conversation-card"
+          [class.active]="selectedContact?.id === contact.id"
+          (click)="selectContact(contact)"
+        >
+          <div class="conversation-avatar">👤</div>
+          <div class="conversation-meta">
+            <p class="conversation-name">{{ fullName(contact) }}</p>
+            <p class="conversation-username">&#64;{{ contact.username }}</p>
           </div>
         </div>
       </div>
 
-      <!-- Invitations list -->
-      <div *ngIf="view === 'invitations'" class="invitations-list">
+      <!-- Invitations -->
+      <div *ngIf="view === 'invitations'" class="sidebar-content">
         <div *ngIf="receivedInvitations.length > 0">
-          <h4 class="section-title">Invitations reçues</h4>
-          <div *ngFor="let inv of receivedInvitations" class="invitation-item received">
-            <div class="inv-info">
-              <p class="inv-name">{{ inv.sender.firstName }} {{ inv.sender.lastName }}</p>
-              <p class="inv-message">&#64;{{ inv.sender.username }}</p>
+          <h4 class="section-heading">Received Invitations</h4>
+
+          <div *ngFor="let inv of receivedInvitations" class="invitation-card">
+            <div class="conversation-meta">
+              <p class="conversation-name">{{ inv.sender.firstName }} {{ inv.sender.lastName }}</p>
+              <p class="conversation-username">&#64;{{ inv.sender.username }}</p>
             </div>
-            <div class="inv-actions">
-              <button class="btn-accept" (click)="acceptInvitation(inv)" title="Accepter">✓</button>
-              <button class="btn-decline" (click)="rejectInvitation(inv)" title="Refuser">✕</button>
+
+            <div class="invitation-actions">
+              <button class="action-btn accept" (click)="acceptInvitation(inv)" title="Accept">Accept</button>
+              <button class="action-btn decline" (click)="rejectInvitation(inv)" title="Decline">Decline</button>
             </div>
           </div>
         </div>
 
         <div *ngIf="sentInvitations.length > 0">
-          <h4 class="section-title" style="margin-top: 16px;">Invitations envoyées</h4>
-          <div *ngFor="let inv of sentInvitations" class="invitation-item sent">
-            <div class="inv-info">
-              <p class="inv-name">{{ inv.receiver.firstName }} {{ inv.receiver.lastName }}</p>
-              <p class="inv-status">⏳ En attente</p>
+          <h4 class="section-heading with-space">Sent Invitations</h4>
+
+          <div *ngFor="let inv of sentInvitations" class="invitation-card sent">
+            <div class="conversation-meta">
+              <p class="conversation-name">{{ inv.receiver.firstName }} {{ inv.receiver.lastName }}</p>
+              <p class="conversation-username">Pending</p>
             </div>
           </div>
         </div>
 
-        <div *ngIf="receivedInvitations.length === 0 && sentInvitations.length === 0" class="empty-message">
-          <p>Aucune invitation</p>
-          <small>Créez une nouvelle conversation pour commencer</small>
+        <div *ngIf="receivedInvitations.length === 0 && sentInvitations.length === 0" class="empty-card">
+          <p>No invitations</p>
+          <small>Create a new conversation to get started</small>
         </div>
       </div>
 
-      <!-- Send invitation — search users by name -->
-      <div *ngIf="view === 'send-invitation'" class="send-invitation-form">
-        <h3>Nouvelle conversation</h3>
-        <div class="form-group">
-          <label>Rechercher une personne</label>
-          <input type="text"
-                 class="form-select"
-                 [(ngModel)]="userSearchQuery"
-                 placeholder="Nom, prénom ou @username..." />
-        </div>
+      <!-- New invitation -->
+      <div *ngIf="view === 'send-invitation'" class="sidebar-content">
+        <div class="compose-box">
+          <h3 class="compose-title">Start New Conversation</h3>
 
-        <div class="conversations-list" style="margin-top: 8px;">
-          <div *ngIf="availableUsers.length === 0" class="empty-message">
-            <small>Aucun utilisateur disponible dans votre organisation</small>
+          <div class="form-group">
+            <label>Find a person</label>
+            <input
+              type="text"
+              class="compose-input"
+              [(ngModel)]="userSearchQuery"
+              placeholder="First name, last name, or @username"
+            />
           </div>
-          <div *ngIf="availableUsers.length > 0 && filteredAvailableUsers.length === 0" class="empty-message">
-            <small>Aucun résultat</small>
-          </div>
-          <div *ngFor="let u of filteredAvailableUsers"
-               class="conversation-item"
-               (click)="sendInvitationTo(u)">
-            <div class="conv-avatar">👤</div>
-            <div class="conv-info">
-              <p class="conv-name">{{ fullName(u) }}</p>
-              <p class="conv-last">&#64;{{ u.username }}</p>
+
+          <div class="user-results">
+            <div *ngIf="availableUsers.length === 0" class="empty-card small">
+              <small>No users available in your organization</small>
             </div>
-            <button class="btn-accept" title="Envoyer l'invitation">+</button>
-          </div>
-        </div>
-      </div>
 
-      <!-- Global chat list placeholder (sidebar) -->
-      <div *ngIf="view === 'global'" class="empty-message">
-        <p>Chat global</p>
-        <small *ngIf="isAdmin">Vous pouvez envoyer des messages à tous</small>
-        <small *ngIf="!isAdmin">Lecture seule — annonces admin</small>
-      </div>
-    </div>
+            <div *ngIf="availableUsers.length > 0 && filteredAvailableUsers.length === 0" class="empty-card small">
+              <small>No results found</small>
+            </div>
 
-    <!-- Main panel -->
-    <div class="chat-content" [class.hidden]="view === 'conversations' && !selectedContact">
-
-      <!-- Private conversation -->
-      <ng-container *ngIf="view === 'conversations' && selectedContact">
-        <div class="chat-convo-header">
-          <div class="avatar">👤</div>
-          <div>
-            <p class="conv-name">{{ fullName(selectedContact) }}</p>
-            <p class="conv-last">&#64;{{ selectedContact.username }}</p>
-          </div>
-        </div>
-
-        <div #messagesScroll class="chat-messages" *ngIf="messages.length > 0; else noMessages">
-          <div *ngFor="let msg of messages"
-               [ngClass]="{'message-sent': isMine(msg), 'message-received': !isMine(msg)}"
-               class="message-group">
-            <div class="message-container">
-              <div *ngIf="!isMine(msg)" class="avatar">👤</div>
-              <div class="message-bubble">
-                {{ msg.content }}
-                <span class="msg-time">{{ msg.sentAt | date:'HH:mm' }}</span>
+            <div
+              *ngFor="let u of filteredAvailableUsers"
+              class="conversation-card selectable"
+              (click)="sendInvitationTo(u)"
+            >
+              <div class="conversation-avatar">👤</div>
+              <div class="conversation-meta">
+                <p class="conversation-name">{{ fullName(u) }}</p>
+                <p class="conversation-username">&#64;{{ u.username }}</p>
               </div>
+              <button class="mini-add-btn" title="Send invitation">+</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Global sidebar -->
+      <div *ngIf="view === 'global'" class="sidebar-content">
+        <div class="empty-card">
+          <p>Announcements Channel</p>
+          <small *ngIf="isAdmin">You can send messages to everyone</small>
+          <small *ngIf="!isAdmin">Read-only for staff members</small>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main chat panel -->
+    <main class="chat-panel" [class.hidden]="view === 'conversations' && !selectedContact">
+      <!-- Private chat -->
+      <ng-container *ngIf="view === 'conversations' && selectedContact">
+        <div class="chat-panel-header">
+          <div class="panel-user">
+            <div class="panel-avatar">👤</div>
+            <div>
+              <p class="panel-name">{{ fullName(selectedContact) }}</p>
+              <p class="panel-username">&#64;{{ selectedContact.username }}</p>
+            </div>
+          </div>
+        </div>
+
+        <div #messagesScroll class="messages-area" *ngIf="messages.length > 0; else noMessages">
+          <div
+            *ngFor="let msg of messages"
+            class="message-row"
+            [ngClass]="{ 'mine': isMine(msg), 'theirs': !isMine(msg) }"
+          >
+            <div class="message-bubble">
+              <span class="message-text">{{ msg.content }}</span>
+              <span class="message-time">{{ msg.sentAt | date:'HH:mm' }}</span>
             </div>
           </div>
         </div>
@@ -147,51 +174,57 @@
         <ng-template #noMessages>
           <div class="empty-state">
             <div class="empty-icon">💬</div>
-            <p class="empty-text">Pas encore de messages</p>
-            <p class="empty-subtext">Commencez la conversation</p>
+            <p class="empty-title">No messages yet</p>
+            <p class="empty-subtitle">Start the conversation</p>
           </div>
         </ng-template>
 
-        <div class="chat-input-section">
-          <div class="input-wrapper">
-            <input type="text"
-                   [(ngModel)]="newMessage"
-                   (keyup.enter)="sendMessage()"
-                   class="chat-input"
-                   placeholder="Écrire un message...">
-            <button (click)="sendMessage()"
-                    class="send-button"
-                    [disabled]="!newMessage.trim()">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M16.6915026,12.4744748 L3.50612381,13.2599618 C3.19218622,13.2599618 3.03521743,13.4170592 3.03521743,13.5741566 L1.15159189,20.0151496 C0.8376543,20.8006365 0.99,21.89 1.77946707,22.52 C2.41,22.99 3.50612381,23.1 4.13399899,22.8429026 L21.714504,14.0454487 C22.6563168,13.5741566 23.1272231,12.6315722 22.9702544,11.6889879 L4.13399899,1.16345286 C3.34915502,0.9 2.40734225,0.9 1.77946707,1.4430013 C0.994623095,2.0788752 0.837654326,3.0214595 1.15159189,3.8429026 L3.03521743,10.2839957 C3.03521743,10.4410931 3.19218622,10.5981905 3.50612381,10.5981905 L16.6915026,11.3836773 C16.6915026,11.3836773 17.1624089,11.3836773 17.1624089,10.8406747 L17.1624089,12.0274561 C17.1624089,12.4987482 16.6915026,12.4744748 16.6915026,12.4744748 Z" fill="currentColor"></path>
-              </svg>
+        <div class="message-composer">
+          <div class="composer-box">
+            <input
+              type="text"
+              [(ngModel)]="newMessage"
+              (keyup.enter)="sendMessage()"
+              class="composer-input"
+              placeholder="Type a message..."
+            />
+            <button
+              (click)="sendMessage()"
+              class="composer-send"
+              [disabled]="!newMessage.trim()"
+            >
+              Send
             </button>
           </div>
+          <div *ngIf="errorMessage" class="chat-error">
+  {{ errorMessage }}
+</div>
         </div>
       </ng-container>
 
       <!-- Global chat -->
       <ng-container *ngIf="view === 'global'">
-        <div class="chat-convo-header">
-          <div class="avatar">📢</div>
-          <div>
-            <p class="conv-name">Chat global</p>
-            <p class="conv-last" *ngIf="isAdmin">Vos annonces sont visibles par tous</p>
-            <p class="conv-last" *ngIf="!isAdmin">Annonces de l'administration</p>
+        <div class="chat-panel-header">
+          <div class="panel-user">
+            <div class="panel-avatar">📢</div>
+            <div>
+              <p class="panel-name">Announcements</p>
+              <p class="panel-username" *ngIf="isAdmin">Visible to all team members</p>
+              <p class="panel-username" *ngIf="!isAdmin">Admin messages only</p>
+            </div>
           </div>
         </div>
 
-        <div #globalScroll class="chat-messages" *ngIf="globalMessages.length > 0; else noGlobal">
-          <div *ngFor="let msg of globalMessages"
-               [ngClass]="{'message-sent': isMine(msg), 'message-received': !isMine(msg)}"
-               class="message-group">
-            <div class="message-container">
-              <div *ngIf="!isMine(msg)" class="avatar">📢</div>
-              <div class="message-bubble">
-                <strong *ngIf="!isMine(msg)">{{ msg.senderName }}:</strong>
-                {{ msg.content }}
-                <span class="msg-time">{{ msg.sentAt | date:'HH:mm' }}</span>
-              </div>
+        <div #globalScroll class="messages-area" *ngIf="globalMessages.length > 0; else noGlobal">
+          <div
+            *ngFor="let msg of globalMessages"
+            class="message-row"
+            [ngClass]="{ 'mine': isMine(msg), 'theirs': !isMine(msg) }"
+          >
+            <div class="message-bubble">
+              <strong *ngIf="!isMine(msg)">{{ msg.senderName }}:</strong>
+              <span class="message-text"> {{ msg.content }}</span>
+              <span class="message-time">{{ msg.sentAt | date:'HH:mm' }}</span>
             </div>
           </div>
         </div>
@@ -199,33 +232,37 @@
         <ng-template #noGlobal>
           <div class="empty-state">
             <div class="empty-icon">📢</div>
-            <p class="empty-text">Aucune annonce</p>
-            <p class="empty-subtext">Les messages globaux apparaîtront ici</p>
+            <p class="empty-title">No announcements yet</p>
+            <p class="empty-subtitle">Global messages will appear here</p>
           </div>
         </ng-template>
 
-        <div class="chat-input-section" *ngIf="isAdmin">
-          <div class="input-wrapper">
-            <input type="text"
-                   [(ngModel)]="newGlobalMessage"
-                   (keyup.enter)="sendGlobalMessage()"
-                   class="chat-input"
-                   placeholder="Annonce à toute l'équipe...">
-            <button (click)="sendGlobalMessage()"
-                    class="send-button"
-                    [disabled]="!newGlobalMessage.trim()">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M16.6915026,12.4744748 L3.50612381,13.2599618 C3.19218622,13.2599618 3.03521743,13.4170592 3.03521743,13.5741566 L1.15159189,20.0151496 C0.8376543,20.8006365 0.99,21.89 1.77946707,22.52 C2.41,22.99 3.50612381,23.1 4.13399899,22.8429026 L21.714504,14.0454487 C22.6563168,13.5741566 23.1272231,12.6315722 22.9702544,11.6889879 L4.13399899,1.16345286 C3.34915502,0.9 2.40734225,0.9 1.77946707,1.4430013 C0.994623095,2.0788752 0.837654326,3.0214595 1.15159189,3.8429026 L3.03521743,10.2839957 C3.03521743,10.4410931 3.19218622,10.5981905 3.50612381,10.5981905 L16.6915026,11.3836773 C16.6915026,11.3836773 17.1624089,11.3836773 17.1624089,10.8406747 L17.1624089,12.0274561 C17.1624089,12.4987482 16.6915026,12.4744748 16.6915026,12.4744748 Z" fill="currentColor"></path>
-              </svg>
+        <div class="message-composer" *ngIf="isAdmin">
+          <div class="composer-box">
+            <input
+              type="text"
+              [(ngModel)]="newGlobalMessage"
+              (keyup.enter)="sendGlobalMessage()"
+              class="composer-input"
+              placeholder="Write an announcement to the whole team..."
+            />
+            <button
+              (click)="sendGlobalMessage()"
+              class="composer-send"
+              [disabled]="!newGlobalMessage.trim()"
+            >
+              Send
             </button>
           </div>
         </div>
       </ng-container>
 
-      <!-- Empty placeholder for conversations tab -->
-      <div *ngIf="view === 'conversations' && !selectedContact" class="no-conversation">
-        <p>Sélectionnez une conversation pour commencer à discuter</p>
+      <!-- Empty state -->
+      <div *ngIf="view === 'conversations' && !selectedContact" class="empty-state large">
+        <div class="empty-icon">💬</div>
+        <p class="empty-title">Select a conversation</p>
+        <p class="empty-subtitle">Choose a contact from the left to start chatting</p>
       </div>
-    </div>
+    </main>
   </div>
 </div>

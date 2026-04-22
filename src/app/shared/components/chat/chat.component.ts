@@ -15,11 +15,12 @@ import { ChatApiService } from '../../services/chat-api.service';
 import { ChatWsService } from '../../services/chat-ws.service';
 import { AuthService } from '../../services/auth.service';
 import { ChatNotificationService } from '../../services/chat-notification.service';
+
 import {
   ChatMessageDto,
   ConnectionRequestDto,
   UserSummary
-} from '../../models/chat.model';
+} from '../../../models/chat.model';
 
 type View = 'conversations' | 'invitations' | 'send-invitation' | 'global';
 
@@ -34,8 +35,10 @@ export class ChatComponent implements OnInit, OnDestroy, AfterViewChecked {
 
   @ViewChild('messagesScroll') private messagesScroll?: ElementRef<HTMLDivElement>;
   @ViewChild('globalScroll') private globalScroll?: ElementRef<HTMLDivElement>;
+
   private shouldScrollPrivate = false;
   private shouldScrollGlobal = false;
+  private subs: Subscription[] = [];
 
   // ---- current user ----
   currentUserId: number | null = null;
@@ -47,18 +50,20 @@ export class ChatComponent implements OnInit, OnDestroy, AfterViewChecked {
   selectedContact: UserSummary | null = null;
 
   // ---- data ----
-  contacts: UserSummary[] = [];                     // accepted connections (private convos)
+  contacts: UserSummary[] = [];
   receivedInvitations: ConnectionRequestDto[] = [];
   sentInvitations: ConnectionRequestDto[] = [];
   availableUsers: UserSummary[] = [];
-  messages: ChatMessageDto[] = [];                  // messages for selected private conv
+  messages: ChatMessageDto[] = [];
   globalMessages: ChatMessageDto[] = [];
 
+  // ---- form state ----
   newMessage = '';
   newGlobalMessage = '';
   userSearchQuery = '';
 
-  private subs: Subscription[] = [];
+  // ---- errors ----
+  errorMessage = '';
 
   constructor(
     private auth: AuthService,
@@ -72,9 +77,13 @@ export class ChatComponent implements OnInit, OnDestroy, AfterViewChecked {
 
   async ngOnInit() {
     const user = this.auth.getUser();
-    if (user) this.applyUser(user);
-    else {
-      this.auth.user$.subscribe(u => { if (u) this.applyUser(u); });
+
+    if (user) {
+      this.applyUser(user);
+    } else {
+      this.auth.user$.subscribe(u => {
+        if (u) this.applyUser(u);
+      });
       this.auth.loadUser();
     }
 
@@ -98,8 +107,6 @@ export class ChatComponent implements OnInit, OnDestroy, AfterViewChecked {
 
   ngOnDestroy() {
     this.subs.forEach(s => s.unsubscribe());
-    // WS connection is owned by ChatNotificationService so that
-    // notifications keep flowing when navigating away from /chat.
     this.chatNotifications.activeContactId = null;
   }
 
@@ -109,6 +116,7 @@ export class ChatComponent implements OnInit, OnDestroy, AfterViewChecked {
       el.scrollTop = el.scrollHeight;
       this.shouldScrollPrivate = false;
     }
+
     if (this.shouldScrollGlobal && this.globalScroll) {
       const el = this.globalScroll.nativeElement;
       el.scrollTop = el.scrollHeight;
@@ -119,6 +127,7 @@ export class ChatComponent implements OnInit, OnDestroy, AfterViewChecked {
   private applyUser(u: any) {
     this.currentUserId = u?.id ?? null;
     this.currentUserName = `${u?.firstName ?? ''} ${u?.lastName ?? ''}`.trim();
+
     const roles: string[] = (u?.roles ?? []).map((r: any) => r?.name ?? r);
     this.isAdmin = roles.includes('ROLE_ADMIN');
   }
@@ -144,6 +153,7 @@ export class ChatComponent implements OnInit, OnDestroy, AfterViewChecked {
       next: list => this.receivedInvitations = list,
       error: err => console.error('getPending', err)
     });
+
     this.connections.getSent().subscribe({
       next: list => this.sentInvitations = list.filter(r => r.status === 'PENDING'),
       error: err => console.error('getSent', err)
@@ -159,7 +169,10 @@ export class ChatComponent implements OnInit, OnDestroy, AfterViewChecked {
 
   private loadGlobalHistory() {
     this.chatApi.getGlobalHistory().subscribe({
-      next: list => { this.globalMessages = list; this.shouldScrollGlobal = true; },
+      next: list => {
+        this.globalMessages = list;
+        this.shouldScrollGlobal = true;
+      },
       error: err => console.error('getGlobalHistory', err)
     });
   }
@@ -169,18 +182,27 @@ export class ChatComponent implements OnInit, OnDestroy, AfterViewChecked {
   selectContact(contact: UserSummary) {
     this.selectedContact = contact;
     this.view = 'conversations';
+    this.errorMessage = '';
     this.chatNotifications.activeContactId = contact.id;
+
     this.chatApi.getPrivateConversation(contact.id).subscribe({
-      next: list => { this.messages = list; this.shouldScrollPrivate = true; },
+      next: list => {
+        this.messages = list;
+        this.shouldScrollPrivate = true;
+      },
       error: err => console.error('getPrivateConversation', err)
     });
   }
 
   sendMessage() {
     if (!this.selectedContact || !this.newMessage.trim()) return;
+
     const receiverId = this.selectedContact.id;
     const content = this.newMessage.trim();
+
+    this.errorMessage = '';
     this.newMessage = '';
+
     this.chatApi.sendPrivate(receiverId, content).subscribe({
       next: saved => {
         if (!this.messages.some(m => m.id === saved.id)) {
@@ -188,16 +210,30 @@ export class ChatComponent implements OnInit, OnDestroy, AfterViewChecked {
           this.shouldScrollPrivate = true;
         }
       },
-      error: err => console.error('sendPrivate', err)
+      error: err => {
+        console.error('sendPrivate', err);
+
+        if (err?.error?.type === 'AI_MODERATION') {
+          this.errorMessage = err.error.message || 'Message blocked by AI moderation';
+        } else {
+          this.errorMessage = err?.error?.message || 'Failed to send message';
+        }
+
+        setTimeout(() => {
+          this.errorMessage = '';
+        }, 4000);
+      }
     });
   }
 
   private handleIncomingPrivate(msg: ChatMessageDto) {
     if (!this.selectedContact || this.currentUserId == null) return;
+
     const otherId = this.selectedContact.id;
     const belongsToOpenConv =
       (msg.senderId === otherId && msg.receiverId === this.currentUserId) ||
       (msg.senderId === this.currentUserId && msg.receiverId === otherId);
+
     if (belongsToOpenConv && !this.messages.some(m => m.id === msg.id)) {
       this.messages.push(msg);
       this.shouldScrollPrivate = true;
@@ -208,14 +244,21 @@ export class ChatComponent implements OnInit, OnDestroy, AfterViewChecked {
 
   acceptInvitation(inv: ConnectionRequestDto) {
     this.connections.acceptRequest(inv.id).subscribe({
-      next: () => { this.loadInvitations(); this.loadContacts(); this.loadAvailableUsers(); },
+      next: () => {
+        this.loadInvitations();
+        this.loadContacts();
+        this.loadAvailableUsers();
+      },
       error: err => console.error('accept', err)
     });
   }
 
   rejectInvitation(inv: ConnectionRequestDto) {
     this.connections.rejectRequest(inv.id).subscribe({
-      next: () => { this.loadInvitations(); this.loadAvailableUsers(); },
+      next: () => {
+        this.loadInvitations();
+        this.loadAvailableUsers();
+      },
       error: err => console.error('reject', err)
     });
   }
@@ -234,14 +277,15 @@ export class ChatComponent implements OnInit, OnDestroy, AfterViewChecked {
 
   get filteredAvailableUsers(): UserSummary[] {
     const q = this.userSearchQuery.trim().toLowerCase();
+
     if (!q) return this.availableUsers;
+
     return this.availableUsers.filter(u =>
       `${u.firstName} ${u.lastName} ${u.username}`.toLowerCase().includes(q)
     );
   }
 
   private handleIncomingInvitation(inv: ConnectionRequestDto) {
-    // Any invitation update (sent-to-me pending, accepted/rejected reply) — just refetch.
     this.loadInvitations();
     if (inv.status === 'ACCEPTED') this.loadContacts();
   }
@@ -250,11 +294,17 @@ export class ChatComponent implements OnInit, OnDestroy, AfterViewChecked {
 
   sendGlobalMessage() {
     if (!this.isAdmin || !this.newGlobalMessage.trim()) return;
+
+    this.errorMessage = '';
+
+    // Avec WebSocket, tu n'as pas facilement le retour d'erreur de modération
+    // sauf si ton backend renvoie un message d'erreur dédié via WS.
+    // Donc ici on garde ton fonctionnement actuel.
     this.chatWs.sendGlobal(this.newGlobalMessage.trim());
     this.newGlobalMessage = '';
   }
 
-  // ========================= view helpers =========================
+  // ========================= helpers =========================
 
   fullName(u: UserSummary): string {
     return `${u.firstName} ${u.lastName}`.trim();
